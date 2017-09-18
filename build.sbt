@@ -89,10 +89,10 @@ def dependencies(scalaVersion: String) =
   CrossVersion.partialVersion(scalaVersion) match {
   case Some((2, major)) if major >= 11 => Seq(
     "org.scalatest"          %% "scalatest"                % scalaTestVersion  % "test",
-    "com.storm-enroute"      %% "scalameter-core"          % scalaMeterVersion % "test;bench",
+    "com.storm-enroute"      %% "scalameter-core"          % scalaMeterVersion % "test", // test;bench",
     "org.scala-lang.modules" %% "scala-parser-combinators" % scalaParserCombinatorsVersion,
     "org.scala-lang"         %  "scala-reflect"            % scalaVersion,
-    "org.scala-lang.modules" %% "scala-async"              % scalaAsyncVersion % "test;bench"
+    "org.scala-lang.modules" %% "scala-async"              % scalaAsyncVersion % "test"  // test;bench"
   )
   case _ => Nil
 }
@@ -221,21 +221,17 @@ def extraDependencies(scalaVersion: String) =
     case _ => Nil
   }
 
-lazy val Benchmarks = config("bench") .extend (Test)
+//lazy val Benchmarks = config("bench") .extend (Test)
 
 lazy val coroutines: Project = Project(
-  "coroutines",
-  file("."),
-  settings = coroutinesSettings
-) .configs(
-  Benchmarks
-) .settings(
-  inConfig(Benchmarks)(Defaults.testSettings): _*
-) .aggregate(
-  coroutinesCommon
-) .dependsOn(
-  coroutinesCommon % "compile->compile;test->test"
-)
+    "coroutines",
+    file("."),
+    settings = coroutinesSettings
+  )
+//  .configs(Benchmarks)
+//  .settings(inConfig(Benchmarks)(Defaults.testSettings): _*)
+  .aggregate(coroutinesCommon)
+  .dependsOn(coroutinesCommon % "compile->compile;test->test")
 
 lazy val coroutinesCommon: Project = Project(
   "coroutines-common",
