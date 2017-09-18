@@ -37,7 +37,7 @@ lazy val coroutinesCommonSettings = Seq(
     "org.scala-lang.modules" %% "scala-parser-combinators"  % scalaParserCombinatorsVersion,
     "org.scala-lang"         %  "scala-reflect"             % scalaVersion.value,
     "org.scalatest"          %% "scalatest"                 % scalaTestVersion  % "test",
-    "com.storm-enroute"      %% "scalameter"                % scalaMeterVersion % "test"  // test;bench",
+    "com.storm-enroute"      %% "scalameter"                % scalaMeterVersion % "test"
   ),
   testFrameworks        += new TestFramework("org.scalameter.ScalaMeterFramework"),
   scalacOptions ++= Seq(
@@ -83,16 +83,20 @@ lazy val coroutinesCommonSettings = Seq(
     </developers>
 )
 
-//lazy val Benchmarks = config("bench") .extend (Test)
+lazy val Benchmarks = config("bench").extend(Test)
 
 lazy val coroutines: Project = Project(id = projectName, base = file("."))
   .aggregate(coroutinesCommon)
   .dependsOn(coroutinesCommon % "compile->compile;test->test")
   .settings(coroutinesCommonSettings)
-//  .configs(Benchmarks)
-//  .settings(inConfig(Benchmarks)(Defaults.testSettings): _*)
+  .configs(Benchmarks)
+  .settings(inConfig(Benchmarks)(Defaults.testSettings): _*)
   .settings(
-    name := projectName
+    name := projectName,
+    libraryDependencies ++= Seq(
+      "com.storm-enroute"       %% "scalameter"   % scalaMeterVersion % "bench",
+      "org.scala-lang.modules"  %% "scala-async"  % scalaAsyncVersion % "bench"
+    )
   )
 
 lazy val coroutinesCommon: Project = Project(id = s"$projectName-common", base = file(s"$projectName-common"))
@@ -100,7 +104,7 @@ lazy val coroutinesCommon: Project = Project(id = s"$projectName-common", base =
   .settings(
     name := s"$projectName-common",
     libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %% "scala-async" % scalaAsyncVersion % "test"  // test;bench"
+      "org.scala-lang.modules" %% "scala-async" % scalaAsyncVersion % "test"
     )
   )
 
