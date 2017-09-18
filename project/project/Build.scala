@@ -1,11 +1,6 @@
-
-
-
 import java.io.File
 import sbt._
 import sbt.Keys._
-
-
 
 object Plugins extends Build {
   val mechadir = new File(s"mecha")

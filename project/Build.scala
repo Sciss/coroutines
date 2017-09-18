@@ -1,15 +1,13 @@
-
-
-
 import java.io._
 import org.stormenroute.mecha._
 import sbt._
 import sbt.Keys._
 import sbt.Process._
 
-
-
 object CoroutinesBuild extends MechaRepoBuild {
+  val scalaTestVersion              = "3.0.4"
+  val scalaAsyncVersion             = "0.9.7"
+  val scalaParserCombinatorsVersion = "1.0.6"
 
   def repoName = "coroutines"
 
@@ -22,7 +20,7 @@ object CoroutinesBuild extends MechaRepoBuild {
   }
 
   val coroutinesCrossScalaVersions = Def.setting {
-    val dir = (baseDirectory in coroutines).value
+    val dir  = (baseDirectory in coroutines).value
     val path = dir + File.separator + "cross.conf"
     scala.io.Source.fromFile(path).getLines.filter(_.trim != "").toSeq
   }
@@ -32,13 +30,13 @@ object CoroutinesBuild extends MechaRepoBuild {
   }
 
   val coroutinesSettings = MechaRepoPlugin.defaultSettings ++ Seq(
-    name := "coroutines",
-    organization := "com.storm-enroute",
-    version <<= frameworkVersion,
-    scalaVersion <<= coroutinesScalaVersion,
-    crossScalaVersions <<= coroutinesCrossScalaVersions,
+    name                  := "coroutines",
+    organization          := "com.storm-enroute",
+    version              <<= frameworkVersion,
+    scalaVersion         <<= coroutinesScalaVersion,
+    crossScalaVersions   <<= coroutinesCrossScalaVersions,
     libraryDependencies <++= (scalaVersion)(sv => dependencies(sv)),
-    libraryDependencies ++= superRepoDependencies("coroutines"),
+    libraryDependencies  ++= superRepoDependencies("coroutines"),
     testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),
     scalacOptions ++= Seq(
       "-deprecation",
@@ -84,30 +82,30 @@ object CoroutinesBuild extends MechaRepoBuild {
         </developer>
       </developers>,
     mechaPublishKey <<= mechaPublishKey.dependsOn(publish),
-    mechaDocsRepoKey := "git@github.com:storm-enroute/apidocs.git",
+    mechaDocsRepoKey   := "git@github.com:storm-enroute/apidocs.git",
     mechaDocsBranchKey := "gh-pages",
-    mechaDocsPathKey := "coroutines"
+    mechaDocsPathKey   := "coroutines"
   )
 
   def dependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
     case Some((2, major)) if major >= 11 => Seq(
-      "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test",
-      "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
-      "org.scala-lang" % "scala-reflect" % "2.11.4",
-      "org.scala-lang.modules" % "scala-async_2.11" % "0.9.5" % "test;bench"
+      "org.scalatest"          %% "scalatest"                % scalaTestVerseion % "test",
+      "org.scala-lang.modules" %% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "org.scala-lang"         %  "scala-reflect"            % scalaVersion.value,
+      "org.scala-lang.modules" %% "scala-async"              % scalaAsyncVersion % "test;bench"
     )
     case _ => Nil
   }
 
   val coroutinesCommonSettings = MechaRepoPlugin.defaultSettings ++ Seq(
-    name := "coroutines-common",
-    organization := "com.storm-enroute",
-    version <<= frameworkVersion,
-    scalaVersion <<= coroutinesScalaVersion,
-    crossScalaVersions <<= coroutinesCrossScalaVersions,
+    name                  := "coroutines-common",
+    organization          := "com.storm-enroute",
+    version               := frameworkVersion.value,
+    scalaVersion          := coroutinesScalaVersion.value,
+    crossScalaVersions    := coroutinesCrossScalaVersions.value,
     libraryDependencies <++= (scalaVersion)(sv => commonDependencies(sv)),
-    libraryDependencies ++= superRepoDependencies("coroutines-common"),
+    libraryDependencies  ++= superRepoDependencies("coroutines-common"),
     scalacOptions ++= Seq(
       "-deprecation",
       "-unchecked",
@@ -122,9 +120,9 @@ object CoroutinesBuild extends MechaRepoBuild {
     ),
     ivyLoggingLevel in ThisBuild := UpdateLogging.Quiet,
     publishMavenStyle := true,
-    publishTo <<= version { (v: String) =>
+    publishTo := {
       val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith("SNAPSHOT"))
+      if (isSnapshot.value)
         Some("snapshots" at nexus + "content/repositories/snapshots")
       else
         Some("releases"  at nexus + "service/local/staging/deploy/maven2")
@@ -152,19 +150,19 @@ object CoroutinesBuild extends MechaRepoBuild {
         </developer>
       </developers>,
     mechaPublishKey <<= mechaPublishKey.dependsOn(publish),
-    mechaDocsRepoKey := "git@github.com:storm-enroute/apidocs.git",
+    mechaDocsRepoKey   := "git@github.com:storm-enroute/apidocs.git",
     mechaDocsBranchKey := "gh-pages",
-    mechaDocsPathKey := "coroutines-common"
+    mechaDocsPathKey   := "coroutines-common"
   )
 
   val coroutinesExtraSettings = MechaRepoPlugin.defaultSettings ++ Seq(
-    name := "coroutines-extra",
-    organization := "com.storm-enroute",
-    version <<= frameworkVersion,
-    scalaVersion <<= coroutinesScalaVersion,
-    crossScalaVersions <<= coroutinesCrossScalaVersions,
+    name                  := "coroutines-extra",
+    organization          := "com.storm-enroute",
+    version              <<= frameworkVersion,
+    scalaVersion         <<= coroutinesScalaVersion,
+    crossScalaVersions   <<= coroutinesCrossScalaVersions,
     libraryDependencies <++= (scalaVersion)(sv => extraDependencies(sv)),
-    testFrameworks += new TestFramework("org.scalameter.ScalaMeterFramework"),
+    testFrameworks        += new TestFramework("org.scalameter.ScalaMeterFramework"),
     scalacOptions ++= Seq(
       "-deprecation",
       "-unchecked",
@@ -179,9 +177,9 @@ object CoroutinesBuild extends MechaRepoBuild {
     ),
     ivyLoggingLevel in ThisBuild := UpdateLogging.Quiet,
     publishMavenStyle := true,
-    publishTo <<= version { (v: String) =>
+    publishTo := {
       val nexus = "https://oss.sonatype.org/"
-      if (v.trim.endsWith("SNAPSHOT"))
+      if (isSnapshot.value)
         Some("snapshots" at nexus + "content/repositories/snapshots")
       else
         Some("releases"  at nexus + "service/local/staging/deploy/maven2")
@@ -209,17 +207,17 @@ object CoroutinesBuild extends MechaRepoBuild {
         </developer>
       </developers>,
     mechaPublishKey <<= mechaPublishKey.dependsOn(publish),
-    mechaDocsRepoKey := "git@github.com:storm-enroute/apidocs.git",
+    mechaDocsRepoKey   := "git@github.com:storm-enroute/apidocs.git",
     mechaDocsBranchKey := "gh-pages",
-    mechaDocsPathKey := "coroutines-extra"
+    mechaDocsPathKey   := "coroutines-extra"
   )
 
   def commonDependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
     case Some((2, major)) if major >= 11 => Seq(
-      "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test",
-      "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
-      "org.scala-lang" % "scala-reflect" % "2.11.4"
+      "org.scalatest"          %% "scalatest"                % scalaTestVersion % "test",
+      "org.scala-lang.modules" %% "scala-parser-combinators" % scalaParserCombinatorsVersion,
+      "org.scala-lang"         %  "scala-reflect"            % scalaVersion.value
     )
     case _ => Nil
   }
@@ -227,7 +225,7 @@ object CoroutinesBuild extends MechaRepoBuild {
   def extraDependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
       case Some((2, major)) if major >= 11 => Seq(
-        "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test"
+        "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
       )
       case _ => Nil
     }
