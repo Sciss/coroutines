@@ -4,7 +4,6 @@ package org.separatepackage
 
 import org.coroutines._
 import org.scalatest._
-import scala.util.Failure
 
 
 

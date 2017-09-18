@@ -3,7 +3,6 @@ package org.examples
 
 
 import org.coroutines._
-import scala.util._
 
 
 
@@ -50,7 +49,7 @@ object MockSnapshot {
     assert(!test(call(myAlgorithm(0))))
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     new MyTestSuite
   }
 }

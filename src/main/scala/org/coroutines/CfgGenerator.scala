@@ -2,17 +2,17 @@ package org.coroutines
 
 
 
-import org.coroutines.common._
 import org.coroutines.common.Cache._
+import org.coroutines.common._
+
 import scala.collection._
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
 /** Generates control flow graphs, and converts CFG nodes to ASTs.
  */
-trait CfgGenerator[C <: Context] {
+trait CfgGenerator[C <: whitebox.Context] {
   self: Analyzer[C] =>
 
   val c: C
@@ -36,13 +36,12 @@ trait CfgGenerator[C <: Context] {
 
     def chain: Chain
 
-    def updateBlockInfo()(implicit table: Table) {
+    def updateBlockInfo()(implicit table: Table): Unit =
       for (t <- code) {
         if (table.contains(t.symbol)) {
           chain.info.occurrences(t.symbol) = table(t.symbol)
         }
       }
-    }
 
     def copyWithoutSuccessors(nch: Chain): Node
 
@@ -56,12 +55,12 @@ trait CfgGenerator[C <: Context] {
 
     final def dfs: Seq[Node] = {
       val seen = mutable.LinkedHashSet[Node]()
-      def traverse(n: Node) {
+      def traverse(n: Node): Unit =
         if (!seen(n)) {
           seen += n
           for (sn <- n.successors) traverse(sn)
         }
-      }
+
       traverse(this)
       seen.toSeq
     }
@@ -91,7 +90,7 @@ trait CfgGenerator[C <: Context] {
       subgraph: SubCfg
     )(implicit table: Table): Node
 
-    protected def addSuccessorsToNodeFront(ctx: ExtractSubgraphContext) {
+    protected def addSuccessorsToNodeFront(ctx: ExtractSubgraphContext): Unit = {
       // add successors to node front
       for (s <- this.successors) if (!ctx.seenEntryPoints(s)) {
         ctx.seenEntryPoints += s
@@ -110,7 +109,7 @@ trait CfgGenerator[C <: Context] {
     protected def genSaveState(subgraph: SubCfg)(implicit t: Table): List[Tree] = {
       val cparam = t.names.coroutineParam
       // store state for non-val variables in scope
-      val stackstores = for ((sym, info) <- storePointVarsInChain(subgraph)) yield {
+      val stackstores: List[Tree] = for ((sym, info) <- storePointVarsInChain(subgraph)) yield {
         info.storeTree(q"${t.names.coroutineParam}", q"${info.name}")
       }
       // update pc state
@@ -118,7 +117,7 @@ trait CfgGenerator[C <: Context] {
       val pcstackset = q"""
         _root_.org.coroutines.common.Stack.update($cparam.$$pcstack, $pc.toShort)
       """
-      pcstackset :: stackstores.toList
+      pcstackset :: stackstores
     }
 
     protected def genExit(value: Tree, subgraph: SubCfg)(implicit t: Table): Tree = {
@@ -138,11 +137,11 @@ trait CfgGenerator[C <: Context] {
       """
     }
 
-    def prettyPrint = {
+    def prettyPrint: String = {
       val text = new StringBuilder
       var count = 0
       val seen = mutable.Map[Node, Int]()
-      def emit(n: Node, prefix: String) {
+      def emit(n: Node, prefix: String): Unit = {
         def shorten(s: String) = {
           if (s.contains('\n')) s.takeWhile(_ != '\n') + "..." else s
         }
@@ -154,7 +153,7 @@ trait CfgGenerator[C <: Context] {
           s"$prefix|-> $count: $name(uid = ${n.uid}, $hc) " +
           s"<$treerepr> ${n.chain.toString.take(50)}\n")
         count += 1
-        def emitChild(c: Node, newPrefix: String) {
+        def emitChild(c: Node, newPrefix: String): Unit = {
           if (seen.contains(c)) {
             val sn = seen(c)
             val hc = System.identityHashCode(c)
@@ -180,8 +179,8 @@ trait CfgGenerator[C <: Context] {
       enduid: Long, tree: Tree, chain: Chain, uid: Long
     ) extends Node {
       var elseSuccessor: Option[Node] = None
-      def successors = (successor ++ elseSuccessor).toSeq
-      override def code = {
+      def successors: Seq[Node] = (successor ++ elseSuccessor).toSeq
+      override def code: Tree = {
         val q"if ($cond) $_ else $_" = tree
         cond
       }
@@ -215,7 +214,7 @@ trait CfgGenerator[C <: Context] {
         seen(this) = nthis
         nthis.updateBlockInfo()
 
-        def extract(s: Node, add: Node => Unit) {
+        def extract(s: Node, add: Node => Unit): Unit = {
           if (!seen.contains(s)) {
             s.extract(nthis.chain, seen, ctx, subgraph)
           }
@@ -233,7 +232,7 @@ trait CfgGenerator[C <: Context] {
       chain: Chain, uid: Long
     ) extends Node {
       val tree: Tree = q""
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -271,7 +270,7 @@ trait CfgGenerator[C <: Context] {
         nthis
       }
       def copyWithoutSuccessors(nch: Chain) = IfEnd(nch, uid)
-      override def isEmptyAtReturn = successor match {
+      override def isEmptyAtReturn: Boolean = successor match {
         case None => true
         case Some(s) => s.isEmptyAtReturn
       }
@@ -280,12 +279,12 @@ trait CfgGenerator[C <: Context] {
     case class While(
       tree: Tree, chain: Chain, uid: Long
     ) extends Node {
-      override def code = {
+      override def code: Tree = {
         val q"while ($cond) $_" = tree
         cond
       }
       var endSuccessor: Option[Node] = None
-      def successors = (successor ++ endSuccessor).toSeq
+      def successors: Seq[Node] = (successor ++ endSuccessor).toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -308,7 +307,7 @@ trait CfgGenerator[C <: Context] {
         seen(this) = nthis
         nthis.updateBlockInfo()
 
-        def extract(s: Node, add: Node => Unit) {
+        def extract(s: Node, add: Node => Unit): Unit = {
           if (!seen.contains(s)) {
             s.extract(nthis.chain, seen, ctx, subgraph)
           }
@@ -327,7 +326,7 @@ trait CfgGenerator[C <: Context] {
     ) extends Node {
       val tree: Tree = q""
       var whileSuccessor: Option[Node] = None
-      def successors = (whileSuccessor ++ successor).toSeq
+      def successors: Seq[Node] = (whileSuccessor ++ successor).toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -353,7 +352,7 @@ trait CfgGenerator[C <: Context] {
         seen(this) = nthis
         nthis.updateBlockInfo()
 
-        def extract(s: Node, add: Node => Unit) {
+        def extract(s: Node, add: Node => Unit): Unit = {
           if (!seen.contains(s)) {
             s.extract(nthis.chain, seen, ctx, subgraph)
           }
@@ -374,7 +373,7 @@ trait CfgGenerator[C <: Context] {
       tree: Tree, chain: Chain, uid: Long
     ) extends Node {
       override def code = q""
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -405,7 +404,7 @@ trait CfgGenerator[C <: Context] {
       chain: Chain, uid: Long
     ) extends Node {
       val tree: Tree = q""
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -443,7 +442,7 @@ trait CfgGenerator[C <: Context] {
 
         nthis
       }
-      override def isEmptyAtReturn = successor match {
+      override def isEmptyAtReturn: Boolean = successor match {
         case None => true
         case Some(s) => s.isEmptyAtReturn
       }
@@ -456,7 +455,7 @@ trait CfgGenerator[C <: Context] {
       override def code = q""
       var finallySuccessor: Option[Node] = None
       var endSuccessor: Option[Node] = None
-      def successors = (successor ++ finallySuccessor ++ endSuccessor).toSeq
+      def successors: Seq[Node] = (successor ++ finallySuccessor ++ endSuccessor).toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -527,7 +526,7 @@ trait CfgGenerator[C <: Context] {
     ) extends Node {
       val tree: Tree = q""
       override def code = q""
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -574,7 +573,7 @@ trait CfgGenerator[C <: Context] {
         case q"$_ val $_: $_ = $co.apply(..$args)" => (co, args)
         case q"$_ val $_: $_ = $co.apply[..$_](..$args)(..$_)" => (co, args)
       }
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def coroutine: Tree = co
       override def code: Tree = {
         q"""
@@ -593,7 +592,7 @@ trait CfgGenerator[C <: Context] {
         prevchain: Chain, seen: mutable.Map[Node, Node], ctx: ExtractSubgraphContext,
         subgraph: SubCfg
       )(implicit table: Table): Node = {
-        val nchain = prevchain.withDecl(tree, false)
+        val nchain = prevchain.withDecl(tree, isArg = false)
         val nthis = this.copyWithoutSuccessors(nchain)
         seen(this) = nthis
         nthis.updateBlockInfo()
@@ -604,7 +603,7 @@ trait CfgGenerator[C <: Context] {
         nthis
       }
       def copyWithoutSuccessors(nch: Chain) = ApplyCoroutine(tree, nch, uid)
-      override def stackVars(sub: SubCfg) = {
+      override def stackVars(sub: SubCfg): List[Symbol] = {
         val chainVars = storePointVarsInChain(sub).map(_._1)
         if (tree.symbol.info != typeOf[Unit]) tree.symbol :: chainVars
         else chainVars
@@ -633,8 +632,8 @@ trait CfgGenerator[C <: Context] {
     case class YieldVal(
       tree: Tree, chain: Chain, uid: Long
     ) extends Node {
-      def successors = successor.toSeq
-      override def code = {
+      def successors: Seq[Node] = successor.toSeq
+      override def code: Tree = {
         tree match {
           case q"$_ val $_: $_ = $qual.yieldval[$_]($x)" if isCoroutinesPkg(qual) => x
           case q"$_ var $_: $_ = $qual.yieldval[$_]($x)" if isCoroutinesPkg(qual) => x
@@ -657,7 +656,7 @@ trait CfgGenerator[C <: Context] {
         val z1 = z.append(exittree)
         z1
       }
-      override def stackVars(sub: SubCfg) = storePointVarsInChain(sub).map(_._1)
+      override def stackVars(sub: SubCfg): List[Symbol] = storePointVarsInChain(sub).map(_._1)
       def extract(
         prevchain: Chain, seen: mutable.Map[Node, Node], ctx: ExtractSubgraphContext,
         subgraph: SubCfg
@@ -677,8 +676,8 @@ trait CfgGenerator[C <: Context] {
     case class YieldTo(
       tree: Tree, chain: Chain, uid: Long
     ) extends Node {
-      def successors = successor.toSeq
-      override def code = {
+      def successors: Seq[Node] = successor.toSeq
+      override def code: Tree = {
         tree match {
           case q"$_ val $_: $_ = $qual.yieldto[$_]($x)" if isCoroutinesPkg(qual) => x
           case q"$_ var $_: $_ = $qual.yieldto[$_]($x)" if isCoroutinesPkg(qual) => x
@@ -705,7 +704,7 @@ trait CfgGenerator[C <: Context] {
         """
         z.append(exittree)
       }
-      override def stackVars(sub: SubCfg) = storePointVarsInChain(sub).map(_._1)
+      override def stackVars(sub: SubCfg): List[Symbol] = storePointVarsInChain(sub).map(_._1)
       def extract(
         prevchain: Chain, seen: mutable.Map[Node, Node], ctx: ExtractSubgraphContext,
         subgraph: SubCfg
@@ -723,7 +722,7 @@ trait CfgGenerator[C <: Context] {
     }
 
     abstract class Statement extends Node {
-      def successors = successor.toSeq
+      def successors: Seq[Node] = successor.toSeq
       def emit(z: Zipper, seen: mutable.Set[Node], subgraph: SubCfg)(
         implicit cc: CanCall, table: Table
       ): Zipper = {
@@ -747,7 +746,7 @@ trait CfgGenerator[C <: Context] {
     case class DefaultStatement(
       tree: Tree, chain: Chain, uid: Long
     ) extends Statement {
-      override def updateBlockInfo()(implicit table: Table) {
+      override def updateBlockInfo()(implicit table: Table): Unit = {
         super.updateBlockInfo()
         tree match {
           case q"$x = $v" if table.contains(x.symbol) =>
@@ -786,7 +785,7 @@ trait CfgGenerator[C <: Context] {
         case q"$_ val $_: $_ = $rhs" => rhs
         case q"$_ var $_: $_ = $rhs" => rhs
       }
-      override def updateBlockInfo()(implicit table: Table) {
+      override def updateBlockInfo()(implicit table: Table): Unit = {
         super.updateBlockInfo()
         chain.info.decls(tree.symbol) = table(tree.symbol)
       }
@@ -794,7 +793,7 @@ trait CfgGenerator[C <: Context] {
         prevchain: Chain, seen: mutable.Map[Node, Node], ctx: ExtractSubgraphContext,
         subgraph: SubCfg
       )(implicit table: Table): Node = {
-        val nchain = prevchain.withDecl(tree, false)
+        val nchain = prevchain.withDecl(tree, isArg = false)
         val nthis = this.copyWithoutSuccessors(nchain)
         seen(this) = nthis
         nthis.updateBlockInfo()
@@ -815,14 +814,13 @@ trait CfgGenerator[C <: Context] {
   }
 
   class Cfg(val start: Node, val subgraphs: Map[Node, SubCfg])(implicit table: Table) {
-    val allnodes = start.dfs.map(n => (n.uid, n)).toMap
-    val stackVars = mutable.Set[Symbol]()
+    val allnodes: Map[Long, Node] = start.dfs.map(n => (n.uid, n)).toMap
+    val stackVars: mutable.Set[Symbol] = mutable.Set()
 
-    def storedValVars = table.valvars.filter(kv => stackVars.contains(kv._1))
+    def storedValVars: mutable.Map[Symbol, VarInfo] = table.valvars.filter(kv => stackVars.contains(kv._1))
+    def storedRefVars: mutable.Map[Symbol, VarInfo] = table.refvars.filter(kv => stackVars.contains(kv._1))
 
-    def storedRefVars = table.refvars.filter(kv => stackVars.contains(kv._1))
-
-    def initializeStackPositions() {
+    def initializeStackPositions(): Unit = {
       // find all stack variables
       stackVars ++= (for {
         sub <- subgraphs.values
@@ -832,7 +830,7 @@ trait CfgGenerator[C <: Context] {
       stackVars ++= table.vars.filter(_._2.isArg).keys
 
       // stack positions
-      def compute(vars: Map[Symbol, VarInfo]) {
+      def compute(vars: Map[Symbol, VarInfo]): Unit = {
         var poscount = 0
         for ((sym, info) <- vars if stackVars.contains(sym)) {
           info.stackpos = (poscount, info.width)
@@ -847,13 +845,13 @@ trait CfgGenerator[C <: Context] {
   }
 
   class SubCfg(val uid: Long) {
-    val exitSubgraphs = mutable.LinkedHashMap[Node, SubCfg]()
+    val exitSubgraphs: mutable.Map[Node, SubCfg] = mutable.LinkedHashMap()
     var start: Node = _
-    val all = mutable.LinkedHashMap[Long, Node]()
-    val childStats = mutable.LinkedHashMap[BlockInfo, Set[BlockInfo]]()
+    val all: mutable.Map[Long, Node] = mutable.LinkedHashMap()
+    val childStats: mutable.Map[BlockInfo, Set[BlockInfo]] = mutable.LinkedHashMap()
 
-    def initializeBlocks() {
-      val chains = start.dfs.map(_.chain).map(_.ancestors).flatten.toSet
+    def initializeBlocks(): Unit = {
+      val chains = start.dfs.map(_.chain).flatMap(_.ancestors).toSet
       childStats ++= chains
         .filter(_.parent != null)
         .groupBy(_.parent)
@@ -938,7 +936,6 @@ trait CfgGenerator[C <: Context] {
           ((sym, info), idx) <- chain.decls.zipWithIndex
           if mustLoadVar(sym, chain)
         } yield {
-          val stack = info.stackname
           val decodedget = info.loadTree(q"$cparam")
           info.origtree match {
             case q"$mods val $name: $tpt = $_" =>
@@ -964,11 +961,11 @@ trait CfgGenerator[C <: Context] {
           case None =>
         }
 
-        (decls.foldLeft(head: Node) {
+        decls.foldLeft(head: Node) {
           (previous, current) =>
-          previous.successor = Some(current)
-          current
-        }).successor = Some(n)
+            previous.successor = Some(current)
+            current
+        }.successor = Some(n)
 
         if (chain.parent == null) (head, checked)
         else {
@@ -1032,60 +1029,60 @@ trait CfgGenerator[C <: Context] {
     def traverse(t: Tree, ch: Chain): (Node, Node) = {
       t match {
         case q"$_ val $_: $_ = $qual.yieldval[$_]($_)" if isCoroutinesPkg(qual) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.YieldVal(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case q"$_ var $_: $_ = $qual.yieldval[$_]($_)" if isCoroutinesPkg(qual) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.YieldVal(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case q"$_ val $_: $_ = $qual.yieldto[$_]($_)" if isCoroutinesPkg(qual) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.YieldTo(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case q"$_ var $_: $_ = $qual.yieldto[$_]($_)" if isCoroutinesPkg(qual) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.YieldTo(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case ValDecl(t @ q"$_ val $_ = $c.apply(..$_)")
           if isCoroutineDefMarker(c.tpe) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.ApplyCoroutine(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case ValDecl(t @ q"$_ var $_ = $c.apply(..$_)")
           if isCoroutineDefMarker(c.tpe) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.ApplyCoroutine(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case ValDecl(t @ q"$_ val $_ = $c.apply[..$_](..$_)(..$_)")
           if isCoroutineDefSugar(c.tpe) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.ApplyCoroutine(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
         case ValDecl(t @ q"$_ var $_ = $c.apply[..$_](..$_)(..$_)")
           if isCoroutineDefSugar(c.tpe) =>
-          val nch = ch.withDecl(t, false)
+          val nch = ch.withDecl(t, isArg = false)
           val n = Node.ApplyCoroutine(t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
-        case ValDecl(t) =>
-          val nch = ch.withDecl(t, false)
-          val n = Node.Decl(t, ch, table.newNodeUid())
+        case ValDecl(_t) =>
+          val nch = ch.withDecl(_t, isArg = false)
+          val n = Node.Decl(_t, ch, table.newNodeUid())
           val u = Node.DefaultStatement(q"()", nch, table.newNodeUid())
           n.successor = Some(u)
           (n, u)
@@ -1094,7 +1091,7 @@ trait CfgGenerator[C <: Context] {
         case q"if ($cond) $thenbranch else $elsebranch" =>
           val endnode = Node.IfEnd(ch, table.newNodeUid())
           val ifnode = Node.If(endnode.uid, t, ch, table.newNodeUid())
-          def addBranch(branch: Tree, add: Node => Unit) {
+          def addBranch(branch: Tree, add: Node => Unit): Unit = {
             val nestedchain = ch.descend()
             val (childhead, childlast) = traverse(branch, nestedchain)
             add(childhead)
@@ -1107,7 +1104,7 @@ trait CfgGenerator[C <: Context] {
               childlast.successor = Some(endnode)
             }
           }
-          addBranch(thenbranch, n => ifnode.successor = Some(n))
+          addBranch(thenbranch, n => ifnode.successor     = Some(n))
           addBranch(elsebranch, n => ifnode.elseSuccessor = Some(n))
           (ifnode, endnode)
         case q"while ($cond) $body" =>
@@ -1169,7 +1166,7 @@ trait CfgGenerator[C <: Context] {
     // add arguments to symbol table
     val bodyChain = args.foldLeft(table.topChain: Chain) { (ch, t) =>
       val q"$_ val $name: $_ = $_" = t
-      ch.withDecl(t, true)
+      ch.withDecl(t, isArg = true)
     }
 
     // traverse tree to construct CFG and extract local variables
@@ -1186,10 +1183,10 @@ trait CfgGenerator[C <: Context] {
   }
 
   class ExtractSubgraphContext(val rettpt: Tree, val allnodes: Map[Long, Node]) {
-    val subgraphs = mutable.LinkedHashMap[Node, SubCfg]()
-    val exitPoints = mutable.LinkedHashMap[SubCfg, mutable.LinkedHashMap[Node, Long]]()
-    val seenEntryPoints = mutable.LinkedHashSet[Node]()
-    val nodefront = mutable.Queue[Node]()
+    val subgraphs       : mutable.Map[Node, SubCfg]                     = mutable.LinkedHashMap()
+    val exitPoints      : mutable.Map[SubCfg, mutable.Map[Node, Long]]  = mutable.LinkedHashMap()
+    val seenEntryPoints : mutable.Set[Node]                             = mutable.LinkedHashSet()
+    val nodefront       : mutable.Queue[Node]                           = mutable.Queue()
   }
 
   def extractSubgraphs(start: Node, rettpt: Tree)(

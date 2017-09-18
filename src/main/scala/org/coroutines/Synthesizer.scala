@@ -2,17 +2,14 @@ package org.coroutines
 
 
 
-import org.coroutines.common._
-import scala.annotation.tailrec
 import scala.collection._
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
 /** Synthesizes all coroutine-related functionality.
  */
-private[coroutines] class Synthesizer[C <: Context](val c: C)
+private[coroutines] class Synthesizer[C <: whitebox.Context](val c: C)
 extends Analyzer[C]
 with CfgGenerator[C]
 with AstCanonicalization[C] {
@@ -136,7 +133,7 @@ with AstCanonicalization[C] {
 
     val returnvaluemethod = returnValueMethodName(tpe)
     val body = {
-      if (returnstores.size == 0) {
+      if (returnstores.isEmpty) {
         q"()"
       } else if (returnstores.size == 1) {
         returnstores(0)._2
@@ -182,7 +179,7 @@ with AstCanonicalization[C] {
       val vars = allvars.filter(kv => stackVars.contains(kv._1))
       val varsize = stackSize(vars)
       val stacksize = math.max(table.initialStackSize, varsize)
-      val bulkpushes = if (vars.size == 0) Nil else List(q"""
+      val bulkpushes = if (vars.isEmpty) Nil else List(q"""
         _root_.org.coroutines.common.Stack.bulkPush($stack, $varsize, $stacksize)
       """)
       val args = vars.values.filter(_.isArg).toList
@@ -195,7 +192,7 @@ with AstCanonicalization[C] {
     }
     val varpops = (for ((sym, info) <- storedRefVars.toList) yield {
       info.popTree
-    }) ++ (if (storedValVars.size == 0) Nil else List(
+    }) ++ (if (storedValVars.isEmpty) Nil else List(
       q"""
         _root_.org.coroutines.common.Stack.bulkPop(
           $$c.$$valstack, ${stackSize(storedValVars)})
@@ -299,7 +296,7 @@ with AstCanonicalization[C] {
       specArity1(argtpts, yldtpt, rettpt)
     } else if (argtpts.length == 2) {
       specArity2(argtpts, yldtpt, rettpt)
-    } else if (argtpts.length == 0 || argtpts.length > 2) {
+    } else if (argtpts.isEmpty || argtpts.length > 2) {
       val nme = TypeName(s"_${argtpts.size}")
       (tq"_root_.org.coroutines.Coroutine.$nme", argtpts :+ yldtpt :+ rettpt)
     } else sys.error("Unreachable case.")
@@ -311,7 +308,7 @@ with AstCanonicalization[C] {
     // println(typedtaflambda)
     // println(typedtaflambda.tpe)
 
-    implicit val table = new Table(typedtaflambda)
+    implicit val table: Table = new Table(typedtaflambda)
     
     // ensure that argument is a function literal
     val q"(..$args) => $body" = typedtaflambda
@@ -347,7 +344,7 @@ with AstCanonicalization[C] {
 
     // emit coroutine instantiation
     val (coroutinequal, tparams) = genCoroutineTpe(argtpts, yldtpt, rettpt)
-    val entrypointmethods = entrypoints.map(_._2)
+    val entrypointmethods = entrypoints.values
     val valnme = TermName(c.freshName("c"))
     val co = q"""
       new $coroutinequal[..$tparams] {

@@ -3,9 +3,8 @@ package org.coroutines
 
 
 import org.coroutines.common._
-import scala.collection._
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+
+import scala.reflect.macros.whitebox
 
 
 
@@ -19,7 +18,7 @@ import scala.reflect.macros.whitebox.Context
  *  Coroutine operations usages are checked for correctness, and nested contexts, such
  *  as function and class declarations, are checked, but not transformed.
  */
-trait AstCanonicalization[C <: Context] {
+trait AstCanonicalization[C <: whitebox.Context] {
   self: Analyzer[C] =>
 
   val c: C
@@ -65,7 +64,7 @@ trait AstCanonicalization[C <: Context] {
 
   def disallowCoroutinesIn(tree: Tree): Unit = {
     for (t <- tree) t match {
-      case CoroutineOp(t) => c.abort(t.pos, "Coroutines disallowed in:\n$tree.")
+      case CoroutineOp(_t) => c.abort(_t.pos, s"Coroutines disallowed in:\n$tree.")
       case _ => // fine
     }
   }
@@ -120,7 +119,7 @@ trait AstCanonicalization[C <: Context] {
         """
       )
       (decls, q"$localvarname")
-    case q"$selector[..$tpts](...$paramss)" if tpts.length > 0 || paramss.length > 0 =>
+    case q"$selector[..$tpts](...$paramss)" if tpts.nonEmpty || paramss.nonEmpty =>
       // application
       val (rdecls, newselector) = selector match {
         case q"$r.$method" =>
@@ -134,7 +133,7 @@ trait AstCanonicalization[C <: Context] {
       val localvarname = TermName(c.freshName("x"))
       val localvartree = q"val $localvarname = $newselector[..$tpts](...$pidents)"
       (rdecls ++ pdeclss.flatten.flatten ++ List(localvartree), q"$localvarname")
-    case q"$r[..$tpts]" if tpts.length > 0 =>
+    case q"$r[..$tpts]" if tpts.nonEmpty =>
       // type application
       for (tpt <- tpts) disallowCoroutinesIn(tpt)
       val (rdecls, rident) = canonicalize(r)
@@ -239,7 +238,6 @@ trait AstCanonicalization[C <: Context] {
       val localvarname = TermName(c.freshName("x"))
       val (exdecls, exident) = canonicalize(expr)
       val tpe = typer.typeOf(tree)
-      val extpe = typer.typeOf(expr)
       val ncases = for (cq"$pat => $branch" <- cases) yield {
         disallowCoroutinesIn(pat)
         val (branchdecls, branchident) = canonicalize(branch)
@@ -262,8 +260,8 @@ trait AstCanonicalization[C <: Context] {
       }
       val patternmatch =
         ncases.foldRight(q"throw new scala.MatchError($exident)": Tree) {
-          case ((patternmatch, ifbranch), elsebranch) =>
-            q"if ($patternmatch) $ifbranch else $elsebranch"
+          case ((_patternmatch, ifbranch), elsebranch) =>
+            q"if (${_patternmatch}) $ifbranch else $elsebranch"
         }
       val decls =
         List(q"var $localvarname = null.asInstanceOf[${tpe.widen}]") ++

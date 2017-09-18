@@ -4,12 +4,11 @@ package org.coroutines.extra
 
 import org.coroutines._
 import org.scalatest._
-import scala.annotation.unchecked.uncheckedVariance
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
-import scala.language.{ reflectiveCalls, postfixOps }
-import scala.util.Success
+import scala.language.{postfixOps, reflectiveCalls}
 
 
 
@@ -154,7 +153,9 @@ class AsyncAwaitTest extends FunSuite with Matchers {
     val future = async {
       val a = await(base.mapTo[Int])
       val b = await(
-        await(Future((Future { (a * 2).toString }).mapTo[Int])))
+        await(Future(Future {
+          (a * 2).toString
+        }.mapTo[Int])))
       val c = await(Future { (7 * 2).toString })
       b + "-" + c
     }
@@ -178,7 +179,7 @@ class AsyncAwaitTest extends FunSuite with Matchers {
         case _: TestException => exceptionFound = true
       }
     }
-    val r = Await.result(future, 1 seconds)
+    val r: Unit = Await.result(future, 1 seconds)
     assert(exceptionFound)
   }
 
@@ -196,7 +197,7 @@ class AsyncAwaitTest extends FunSuite with Matchers {
         case _: TestException => exceptionFound = true
       }
     }
-    val r = Await.result(future, 1 seconds)
+    val r: Unit = Await.result(future, 1 seconds)
     assert(exceptionFound)
   }
 }

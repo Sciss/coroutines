@@ -23,7 +23,7 @@ object ControlTransferWithPull {
     yieldval(Random.nextDouble())
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val r0 = call(random())
     assert(r0.resume)
     assert(r0.hasValue)

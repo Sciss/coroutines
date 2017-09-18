@@ -3,7 +3,7 @@ package org.examples
 
 
 import org.coroutines._
-import scala.collection._
+
 import scala.util.Failure
 
 
@@ -21,7 +21,7 @@ object Exceptions {
     throw TestException()
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val c = call(kaboom(5))
     assert(c.resume)
     assert(c.value == 5)

@@ -21,7 +21,7 @@ object FaqSimpleExample {
     xs.reverse
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val instance = call(range(10))
     val elems = extract(instance)
     assert(elems == (0 until 10))

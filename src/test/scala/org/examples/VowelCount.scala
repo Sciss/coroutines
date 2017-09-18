@@ -15,7 +15,7 @@ object VowelCounts {
     yieldval(s.count(_ == 'u'))
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val c = call(vowelcounts("this the season to be jolie"))
     c.resume
     assert(c.value == 1)

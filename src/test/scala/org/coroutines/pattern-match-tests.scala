@@ -3,7 +3,6 @@ package org.coroutines
 
 
 import org.scalatest._
-import scala.util.Failure
 
 
 

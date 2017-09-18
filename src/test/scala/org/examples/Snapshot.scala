@@ -13,7 +13,7 @@ object Snapshot {
     yieldval(3)
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val c = call(values())
     assert(c.resume)
     assert(c.value == 1)

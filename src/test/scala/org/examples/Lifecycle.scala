@@ -20,7 +20,7 @@ object Lifecycle {
     i + 2
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val c = call(katamari(9))
     assert(c.resume)
     assert(c.hasValue)

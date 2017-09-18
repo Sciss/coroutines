@@ -3,13 +3,10 @@ package org.coroutines
 
 
 import org.coroutines.common._
+
 import scala.annotation.tailrec
-import scala.annotation.unchecked.uncheckedVariance
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.reflect.macros.whitebox
+import scala.util.{Failure, Success, Try}
 
 
 
@@ -96,8 +93,8 @@ object Coroutine {
     var $refstack: Array[AnyRef] = _
     var $valstackptr = 0
     var $valstack: Array[Int] = _
-    var $target: Instance[Y, _] = null
-    var $exception: Throwable = null
+    var $target: Instance[Y, _] = _
+    var $exception: Throwable = _
     var $hasYield: Boolean = false
     var $yield: Y = null.asInstanceOf[Y]
     var $result: R = null.asInstanceOf[R]
@@ -292,7 +289,7 @@ object Coroutine {
      */
     final def debugString: String = {
       def toStackLength[T](stack: Array[T]) =
-        if (stack != null) "${stack.length}" else "<uninitialized>"
+        if (stack != null) s"${stack.length}" else "<uninitialized>"
       def toStackString[T](stack: Array[T]) =
         if (stack != null) stack.mkString("[", ", ", "]") else "<uninitialized>"
       s"Coroutine.Instance <\n" +
@@ -313,11 +310,11 @@ object Coroutine {
 
   trait DefMarker[YR]
 
-  def synthesize(c: Context)(f: c.Tree): c.Tree = {
+  def synthesize(c: whitebox.Context)(f: c.Tree): c.Tree = {
     new Synthesizer[c.type](c).synthesize(f)
   }
 
-  def call[T: c.WeakTypeTag](c: Context)(f: c.Tree): c.Tree = {
+  def call[T: c.WeakTypeTag](c: whitebox.Context)(f: c.Tree): c.Tree = {
     new Synthesizer[c.type](c).call(f)
   }
 

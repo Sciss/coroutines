@@ -3,7 +3,6 @@ package org.examples
 
 
 import org.scalatest._
-import scala.util.Failure
 
 
 

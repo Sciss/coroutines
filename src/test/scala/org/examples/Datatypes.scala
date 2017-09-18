@@ -23,7 +23,7 @@ object Datatypes {
     } while (i < n)
   }
 
-  def assertEqualsRange(n: Int, co: Int ~~> (Int, Unit)) {
+  def assertEqualsRange(n: Int, co: Int ~~> (Int, Unit)): Unit = {
     val c = call(co(n))
     for (i <- 0 until n) {
       c.resume
@@ -31,7 +31,7 @@ object Datatypes {
     }
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     assertEqualsRange(5, whileRange)
     assertEqualsRange(5, doWhileRange)
   }

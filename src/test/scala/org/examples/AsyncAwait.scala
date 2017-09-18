@@ -30,7 +30,7 @@ object AsyncAwait {
   def async[Y, R](body: ~~~>[(Future[Y], Cell[Y]), R]): Future[R] = {
     val c = call(body())
     val p = Promise[R]
-    def loop() {
+    def loop(): Unit = {
       if (!c.resume) p.success(c.result)
       else {
         val (future, cell) = c.value
@@ -44,7 +44,7 @@ object AsyncAwait {
     p.future
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val f = Future { math.sqrt(121) }
     val g = Future { math.abs(-15) }
     /** Calls to yieldval inside an inner coroutine are yield points inside the

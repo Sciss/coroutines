@@ -9,7 +9,7 @@ import org.coroutines._
 object Identity {
   val id = coroutine { (x: Int) => x }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val c = call(id(7))
     assert(!c.resume)
     assert(c.result == 7)

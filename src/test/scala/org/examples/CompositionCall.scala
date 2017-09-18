@@ -23,7 +23,7 @@ object CompositionCall {
     }
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val xs = Some(1) :: None :: Some(3) :: Nil
     val c = call(optionListElems(xs))
     assert(c.resume)
