@@ -4,7 +4,7 @@ lazy val projectName                    = "coroutines"
 //lazy val projectOrg                     = "com.storm-enroute"
 
 // we change these to publish other artifact
-lazy val projectVersion                 = "0.1.0-SNAPSHOT"
+lazy val projectVersion                 = "0.1.0"
 lazy val projectOrg                     = "de.sciss"
 
 def repoName                            = projectName
@@ -28,10 +28,10 @@ lazy val coroutinesCommonSettings = Seq(
   crossScalaVersions    := Seq("2.12.3", "2.11.11"),
   resolvers             += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   libraryDependencies  ++= Seq(
-    "org.scala-lang.modules" %% "scala-parser-combinators"  % scalaParserCombinatorsVersion,
-    "org.scala-lang"         %  "scala-reflect"             % scalaVersion.value,
-    "org.scalatest"          %% "scalatest"                 % scalaTestVersion  % "test",
-    "com.storm-enroute"      %% "scalameter"                % scalaMeterVersion % "test"
+    "org.scala-lang.modules" %% "scala-parser-combinators"  % scalaParserCombinatorsVersion % "provided",
+    "org.scala-lang"         %  "scala-reflect"             % scalaVersion.value            % "provided",
+    "org.scalatest"          %% "scalatest"                 % scalaTestVersion              % "test",
+    "com.storm-enroute"      %% "scalameter"                % scalaMeterVersion             % "test"
   ),
   testFrameworks        += new TestFramework("org.scalameter.ScalaMeterFramework"),
   scalacOptions ++= Seq(
@@ -93,8 +93,8 @@ lazy val coroutines: Project = Project(id = projectName, base = file("."))
   .settings(
     name := projectName,
     libraryDependencies ++= Seq(
-      "com.storm-enroute"       %% "scalameter"   % scalaMeterVersion % "bench",
-      "org.scala-lang.modules"  %% "scala-async"  % scalaAsyncVersion % "bench"
+      "com.storm-enroute"       %% "scalameter"   % scalaMeterVersion % "test;bench",
+      "org.scala-lang.modules"  %% "scala-async"  % scalaAsyncVersion % "test;bench"
     )
   )
 
