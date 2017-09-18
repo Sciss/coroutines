@@ -19,7 +19,7 @@ class EnumeratorsBoxingBench extends JBench.Forked[Long] {
   )
 
   def measurer =
-    for (table <- Measurer.BoxingCount.allWithoutBoolean()) yield {      
+    for (table <- Measurer.BoxingCount.allWithoutBoolean()) yield {
       table.copy(value = table.value.valuesIterator.sum)
     }
 
