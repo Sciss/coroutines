@@ -1,14 +1,12 @@
-package org.coroutines.extra
+package org.coroutines
+package extra
 
 
-
-import org.coroutines._
-import scala.annotation.unchecked.uncheckedVariance
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
-import scala.util.{ Success, Failure }
+import scala.reflect.macros.whitebox
+import scala.util.{Failure, Success}
 
 
 
@@ -81,7 +79,7 @@ object AsyncAwait {
    *  @return      A tree that contains an invocation of `asyncCall` on a coroutine
    *               with `body` as its body.
    */
-  def asyncMacro[Y, R](c: Context)(body: c.Tree): c.Tree = {
+  def asyncMacro[Y, R](c: whitebox.Context)(body: c.Tree): c.Tree = {
     import c.universe._
 
     /** Ensures that no values are yielded inside the async block.
@@ -92,8 +90,8 @@ object AsyncAwait {
      */
     class NoYieldsValidator extends Traverser {
       // return type is the lub of the function return type and yield argument types
-      def isCoroutinesPkg(q: Tree) = q match {
-        case q"org.coroutines.`package`" => true
+      def isCoroutinesPkg(q: Tree): Boolean = q match {
+        case q"org.coroutines.`package`"  => true
         case q"coroutines.this.`package`" => true
         case t => false
       }

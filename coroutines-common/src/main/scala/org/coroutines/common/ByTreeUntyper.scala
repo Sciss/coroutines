@@ -3,12 +3,11 @@ package org.coroutines.common
 
 
 import scala.collection._
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
-private[coroutines] class ByTreeUntyper[C <: Context](val c: C)(val treeValue: Any) {
+private[coroutines] class ByTreeUntyper[C <: whitebox.Context](val c: C)(val treeValue: Any) {
   import c.universe._
   private val tree = treeValue.asInstanceOf[Tree]
   private val untypedTree = c.untypecheck(tree)
@@ -16,5 +15,5 @@ private[coroutines] class ByTreeUntyper[C <: Context](val c: C)(val treeValue: A
   private val traverser = new TraverserUtil[c.type](c)
   traverser.traverseByShape(tree, untypedTree)((t, pt) => treeMapping(t) = pt)
 
-  def untypecheck(t: Tree) = if (treeMapping.contains(t)) treeMapping(t) else t
+  def untypecheck(t: Tree): c.universe.Tree = if (treeMapping.contains(t)) treeMapping(t) else t
 }

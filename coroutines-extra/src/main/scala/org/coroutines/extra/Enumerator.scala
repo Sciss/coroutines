@@ -3,9 +3,9 @@ package org.coroutines.extra
 
 
 import org.coroutines._
-import scala.collection._
+
 import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
@@ -26,7 +26,7 @@ class Enumerator[@specialized(Int, Long, Double) Y]
    *
    *  @return true iff `next` can be called again without error
    */
-  def hasNext(): Boolean = _hasNext
+  def hasNext: Boolean = _hasNext
 
   /** Returns the next value in the enumerator.
    *
@@ -47,9 +47,9 @@ object Enumerator {
 
   def apply[Y](c: Coroutine._0[Y, _]) = new Enumerator(call(c()))
 
-  def apply[Y, R](body: =>R): Enumerator[Y] = macro applyMacro[Y, R]
+  def apply[Y, R](body: => R): Enumerator[Y] = macro applyMacro[Y, R]
 
-  def applyMacro[Y, R](c: Context)(body: c.Tree): c.Tree = {
+  def applyMacro[Y, R](c: whitebox.Context)(body: c.Tree): c.Tree = {
     import c.universe._
 
     q"""

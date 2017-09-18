@@ -3,14 +3,14 @@ package org.coroutines.common
 
 
 import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
 object Stack {
   def init[T](stack: Array[T], size: Int): Unit = macro initMacro[T]
 
-  def initMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree, size: c.Tree): c.Tree = {
+  def initMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree, size: c.Tree): c.Tree = {
     import c.universe._
 
     val tpe = implicitly[c.WeakTypeTag[T]]
@@ -21,7 +21,7 @@ object Stack {
 
   def copy[T](src: Array[T], dest: Array[T]): Unit = macro copyMacro[T]
 
-  def copyMacro[T: c.WeakTypeTag](c: Context)(src: c.Tree, dest: c.Tree): c.Tree = {
+  def copyMacro[T: c.WeakTypeTag](c: whitebox.Context)(src: c.Tree, dest: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$srcpath.${srcname: TermName}" = src
@@ -43,7 +43,7 @@ object Stack {
 
   def push[T](stack: Array[T], x: T, size: Int): Unit = macro pushMacro[T]
 
-  def pushMacro[T: c.WeakTypeTag](c: Context)(
+  def pushMacro[T: c.WeakTypeTag](c: whitebox.Context)(
     stack: c.Tree, x: c.Tree, size: c.Tree
   ): c.Tree = {
     import c.universe._
@@ -66,7 +66,7 @@ object Stack {
 
   def bulkPush[T](stack: Array[T], n: Int, size: Int): Unit = macro bulkPushMacro[T]
 
-  def bulkPushMacro[T: c.WeakTypeTag](c: Context)(
+  def bulkPushMacro[T: c.WeakTypeTag](c: whitebox.Context)(
     stack: c.Tree, n: c.Tree, size: c.Tree
   ): c.Tree = {
     import c.universe._
@@ -75,7 +75,6 @@ object Stack {
     val stackptrname = TermName(s"${name}ptr")
     val stackptr = q"$path.$stackptrname"
     val tpe = implicitly[WeakTypeTag[T]]
-    val valnme = TermName(c.freshName())
     q"""
       _root_.org.coroutines.common.Stack.init[$tpe]($stack, $size)
       $stackptr += $n
@@ -89,7 +88,7 @@ object Stack {
 
   def pop[T](stack: Array[T]): T = macro popMacro[T]
 
-  def popMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree): c.Tree = {
+  def popMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack
@@ -107,14 +106,12 @@ object Stack {
 
   def bulkPop[T](stack: Array[T], n: Int): Unit = macro bulkPopMacro[T]
 
-  def bulkPopMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree, n: c.Tree): c.Tree = {
+  def bulkPopMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree, n: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack
     val stackptrname = TermName(s"${name}ptr")
     val stackptr = q"$path.$stackptrname"
-    val tpe = implicitly[WeakTypeTag[T]]
-    val valnme = TermName(c.freshName())
     q"""
       $stackptr -= $n
     """
@@ -122,7 +119,7 @@ object Stack {
 
   def top[T](stack: Array[T]): T = macro topMacro[T]
 
-  def topMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree): c.Tree = {
+  def topMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack
@@ -135,13 +132,12 @@ object Stack {
 
   def get[T](stack: Array[T], n: Int): T = macro getMacro[T]
 
-  def getMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree, n: c.Tree): c.Tree = {
+  def getMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree, n: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack
     val stackptrname = TermName(s"${name}ptr")
     val stackptr = q"$path.$stackptrname"
-    val valnme = TermName(c.freshName())
     q"""
       $stack($stackptr - 1 - $n)
     """
@@ -149,7 +145,7 @@ object Stack {
 
   def set[T](stack: Array[T], n: Int, x: T): Unit = macro setMacro[T]
 
-  def setMacro[T: c.WeakTypeTag](c: Context)(
+  def setMacro[T: c.WeakTypeTag](c: whitebox.Context)(
     stack: c.Tree, n: c.Tree, x: c.Tree
   ): c.Tree = {
     import c.universe._
@@ -157,7 +153,6 @@ object Stack {
     val q"$path.${name: TermName}" = stack
     val stackptrname = TermName(s"${name}ptr")
     val stackptr = q"$path.$stackptrname"
-    val valnme = TermName(c.freshName())
     q"""
       $stack($stackptr - 1 - $n) = $x
     """
@@ -165,7 +160,7 @@ object Stack {
 
   def update[T](stack: Array[T], x: T): T = macro updateMacro[T]
 
-  def updateMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree, x: c.Tree): c.Tree = {
+  def updateMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree, x: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack
@@ -181,7 +176,7 @@ object Stack {
 
   def isEmpty[T](stack: Array[T]): Boolean = macro isEmptyMacro[T]
 
-  def isEmptyMacro[T: c.WeakTypeTag](c: Context)(stack: c.Tree): c.Tree = {
+  def isEmptyMacro[T: c.WeakTypeTag](c: whitebox.Context)(stack: c.Tree): c.Tree = {
     import c.universe._
 
     val q"$path.${name: TermName}" = stack

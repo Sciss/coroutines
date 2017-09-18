@@ -8,7 +8,7 @@ import scala.collection._
 
 object Cache {
   class _1[T, S](val function: T => S) {
-    val cache = mutable.Map[T, S]()
+    val cache: mutable.Map[T, S] = mutable.Map()
     def apply(t: T): S = cache.get(t) match {
       case Some(s) => s
       case None =>
@@ -21,7 +21,7 @@ object Cache {
   def cached[T, S](f: T => S): _1[T, S] = new _1(f)
 
   class _2[T1, T2, S](val function: (T1, T2) => S) {
-    val cache = mutable.Map[(T1, T2), S]()
+    val cache: mutable.Map[(T1, T2), S] = mutable.Map()
     def apply(t1: T1, t2: T2): S = cache.get((t1, t2)) match {
       case Some(s) => s
       case None =>
@@ -34,7 +34,7 @@ object Cache {
   def cached[T1, T2, S](f: (T1, T2) => S): _2[T1, T2, S] = new _2(f)
 
   class _3[T1, T2, T3, S](val function: (T1, T2, T3) => S) {
-    val cache = mutable.Map[(T1, T2, T3), S]()
+    val cache: mutable.Map[(T1, T2, T3), S] = mutable.Map()
     def apply(t1: T1, t2: T2, t3: T3): S = cache.get((t1, t2, t3)) match {
       case Some(s) => s
       case None =>

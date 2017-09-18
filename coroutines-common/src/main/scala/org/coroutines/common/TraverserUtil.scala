@@ -2,20 +2,19 @@ package org.coroutines.common
 
 
 
-import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
 /** Contains extra tree traversal methods.
  */
-class TraverserUtil[C <: Context](val c: C) {
+class TraverserUtil[C <: whitebox.Context](val c: C) {
   import c.universe._
 
   /** Traverse equivalent parts of two trees in parallel,
    *  applying the specified function to parts of the tree with the same shape.
    */
-  def traverseByShape(t0: Tree, t1: Tree)(f: (Tree, Tree) => Unit) = {
+  def traverseByShape(t0: Tree, t1: Tree)(f: (Tree, Tree) => Unit): Unit = {
     def traverse(t0: Tree, t1: Tree): Unit = {
       f(t0, t1)
       (t0, t1) match {
@@ -94,7 +93,7 @@ class TraverserUtil[C <: Context](val c: C) {
           for ((c0, c1) <- cs0 zip cs1) traverse(c0, c1)
           traverse(f0, f1)
         case (q"$a0[..$tpts0](...$paramss0)", q"$a1[..$tpts1](...$paramss1)")
-          if tpts0.length > 0 || paramss0.length > 0 =>
+          if tpts0.nonEmpty || paramss0.nonEmpty =>
           // application
           traverse(a0, a1)
           for ((t0, t1) <- tpts0 zip tpts1) traverse(t0, t1)
@@ -128,7 +127,7 @@ class TraverserUtil[C <: Context](val c: C) {
           // super type selection
         case (tq"this.$n0", tq"this.$n1") =>
           // this type projection
-        case (tq"$tpt0[..$tps0]", tq"$tpt1[..$tps1]") if tps0.length > 0 =>
+        case (tq"$tpt0[..$tps0]", tq"$tpt1[..$tps1]") if tps0.nonEmpty =>
           // applied type
           traverse(tpt0, tpt1)
           for ((tp0, tp1) <- tps0 zip tps1) traverse(tp0, tp1)

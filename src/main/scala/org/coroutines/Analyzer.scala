@@ -3,22 +3,23 @@ package org.coroutines
 
 
 import org.coroutines.common._
+
 import scala.collection._
 import scala.language.experimental.macros
-import scala.reflect.macros.whitebox.Context
+import scala.reflect.macros.whitebox
 
 
 
 /** Declares basic data types and analysis utilities.
  */
-trait Analyzer[C <: Context] {
+trait Analyzer[C <: whitebox.Context] {
   val c: C
 
   import c.universe._
 
   case class Zipper(above: Zipper, left: List[Tree], ctor: List[Tree] => Tree) {
     def append(x: Tree) = Zipper(above, x :: left, ctor)
-    def isRoot = above == null
+    def isRoot: Boolean = above == null
     def result: Tree = {
       var z = this
       while (z.above != null) z = z.ascend
@@ -37,20 +38,20 @@ trait Analyzer[C <: Context] {
     val isArg: Boolean,
     val table: Table
   ) {
-    private var rawstackpos: (Int, Int) = null
-    val tpe = sym.info
-    val name = sym.name.toTermName
+    private var rawstackpos: (Int, Int) = _
+    val tpe : Type     = sym.info
+    val name: TermName = sym.name.toTermName
     def stackpos: (Int, Int) = {
       assert(rawstackpos != null, s"Variable '$sym' without computed stack position.")
       rawstackpos
     }
-    def isWide = tpe =:= typeOf[Double] || tpe =:= typeOf[Long]
+    def isWide: Boolean = tpe =:= typeOf[Double] || tpe =:= typeOf[Long]
     def width: Int = if (isWide) 2 else 1
-    def stackpos_=(v: (Int, Int)) = rawstackpos = v
-    def isUnitType = tpe =:= typeOf[Unit]
-    def isAnyType = tpe =:= typeOf[Any]
-    def isRefType = Analyzer.this.isRefType(tpe)
-    def isValType = Analyzer.this.isValType(tpe)
+    def stackpos_=(v: (Int, Int)): Unit = rawstackpos = v
+    def isUnitType: Boolean = tpe =:= typeOf[Unit]
+    def isAnyType: Boolean = tpe =:= typeOf[Any]
+    def isRefType: Boolean = Analyzer.this.isRefType(tpe)
+    def isValType: Boolean = Analyzer.this.isValType(tpe)
     val defaultValue: Tree = {
       if (isRefType) q"null"
       else if (tpe =:= typeOf[Boolean]) q"false"
@@ -98,11 +99,11 @@ trait Analyzer[C <: Context] {
       val t = if (isArg) q"$name" else defaultValue
       if (isRefType) t else t
     }
-    val stackname = {
+    val stackname: TermName = {
       if (isRefType) TermName("$refstack")
       else TermName("$valstack")
     }
-    val stacktpe = {
+    val stacktpe: Type = {
       if (isRefType) typeOf[AnyRef] else typeOf[Int]
     }
     def pushTree(implicit t: Table): Tree = {
@@ -121,7 +122,7 @@ trait Analyzer[C <: Context] {
           $$c.$stackname, ${encodeInt(initialValue)}, ${t.initialStackSize})
       """
     }
-    def popTree = {
+    def popTree: Tree = {
       if (isWide) q"""
         _root_.org.coroutines.common.Stack.pop[$stacktpe]($$c.$stackname)
         _root_.org.coroutines.common.Stack.pop[$stacktpe]($$c.$stackname)
@@ -182,13 +183,13 @@ trait Analyzer[C <: Context] {
 
   class Table(private val lambda: Tree) {
     val q"(..$args) => $body" = lambda
-    val yieldType = inferYieldType(body)
-    val returnType = inferReturnType(body)
-    val returnValueMethodName = Analyzer.this.returnValueMethodName(returnType.tpe)
+    val yieldType : Tree = inferYieldType (body)
+    val returnType: Tree = inferReturnType(body)
+    val returnValueMethodName: TermName = Analyzer.this.returnValueMethodName(returnType.tpe)
     private var varCount = 0
     private var nodeCount = 0L
     private var subgraphCount = 0L
-    val vars = mutable.LinkedHashMap[Symbol, VarInfo]()
+    val vars: mutable.Map[c.universe.Symbol, VarInfo] = mutable.LinkedHashMap()
     val topChain = Chain(new BlockInfo(None), Nil, this, null)
     val untyper = new ByTreeUntyper[c.type](c)(lambda)
     def initialStackSize: Int = 4
@@ -211,18 +212,18 @@ trait Analyzer[C <: Context] {
       c
     }
     def foreach[U](f: ((Symbol, VarInfo)) => U): Unit = vars.foreach(f)
-    def contains(s: Symbol) = vars.contains(s)
+    def contains(s: Symbol): Boolean = vars.contains(s)
     def apply(s: Symbol) = vars(s)
-    def refvars = vars.filter(_._2.isRefType)
-    def valvars = vars.filter(_._2.isValType)
+    def refvars: mutable.Map[Symbol, VarInfo] = vars.filter(_._2.isRefType)
+    def valvars: mutable.Map[Symbol, VarInfo] = vars.filter(_._2.isValType)
   }
 
   class BlockInfo(val tryuids: Option[(Long, Long)]) {
-    val decls = mutable.LinkedHashMap[Symbol, VarInfo]()
-    val occurrences = mutable.LinkedHashMap[Symbol, VarInfo]()
-    val assignments = mutable.LinkedHashMap[Symbol, VarInfo]()
+    val decls: mutable.Map[c.universe.Symbol, VarInfo] = mutable.LinkedHashMap[Symbol, VarInfo]()
+    val occurrences: mutable.Map[Symbol, VarInfo] = mutable.LinkedHashMap()
+    val assignments: mutable.Map[Symbol, VarInfo] = mutable.LinkedHashMap()
     def copyWithoutVars = new BlockInfo(tryuids)
-    override def toString = {
+    override def toString: String = {
       s"[decl = ${decls.map(_._1.name).mkString(", ")}, " +
       s"occ = ${occurrences.map(_._1.name).mkString(", ")}, " +
       s"ass = ${assignments.map(_._1.name).mkString(", ")}, " +
@@ -272,10 +273,10 @@ trait Analyzer[C <: Context] {
     def withDecl(valdef: Tree, isArg: Boolean): Chain = {
       val sym = valdef.symbol
       val varinfo = table.vars.get(sym) match {
-        case Some(varinfo) =>
-          varinfo
+        case Some(_varinfo) =>
+          _varinfo
         case None =>
-          new VarInfo(table.newVarUid, valdef, sym, isArg, table)
+          new VarInfo(table.newVarUid(), valdef, sym, isArg, table)
       }
       table.vars(sym) = varinfo
       Chain(info, (sym, varinfo) :: decls, table, parent)
@@ -287,12 +288,12 @@ trait Analyzer[C <: Context] {
       val nparent = if (parent == null) null else parent.copyWithoutBlocks
       Chain(info.copyWithoutVars, decls, table, nparent)
     }
-    override def equals(that: Any) = that match {
+    override def equals(that: Any): Boolean = that match {
       case that: AnyRef => this eq that
       case _ => false
     }
-    override def hashCode = System.identityHashCode(this)
-    override def toString = {
+    override def hashCode: Int = System.identityHashCode(this)
+    override def toString: String = {
       val s = s"[${decls.map(_._1.name).mkString(", ")}] -> "
       if (parent != null) s + parent.toString else s
     }
@@ -318,23 +319,23 @@ trait Analyzer[C <: Context] {
     }
   }
 
-  def isCoroutineDef(tpe: Type) = {
+  def isCoroutineDef(tpe: Type): Boolean = {
     val codefsym = typeOf[Coroutine[_, _]].typeConstructor.typeSymbol
     tpe.baseType(codefsym) != NoType
   }
 
-  def isCoroutineDefMarker(tpe: Type) = {
+  def isCoroutineDefMarker(tpe: Type): Boolean = {
     val codefsym = typeOf[Coroutine.DefMarker[_]].typeConstructor.typeSymbol
     tpe.baseType(codefsym) != NoType
   }
 
-  def isCoroutineDefSugar0(tpe: Type) = {
+  def isCoroutineDefSugar0(tpe: Type): Boolean = {
     val codefsym0 = typeOf[~~~>[_, _]].typeConstructor.typeSymbol
     def hasBase(sym: Symbol) = tpe.baseType(sym) != NoType
     hasBase(codefsym0)
   }
 
-  def isCoroutineDefSugar(tpe: Type) = {
+  def isCoroutineDefSugar(tpe: Type): Boolean = {
     val codefsym0 = typeOf[~~~>[_, _]].typeConstructor.typeSymbol
     val codefsym1 = typeOf[~~>[_, _]].typeConstructor.typeSymbol
     val codefsym2 = typeOf[~>[_, _]].typeConstructor.typeSymbol
@@ -354,7 +355,7 @@ trait Analyzer[C <: Context] {
       }
       val codefsym2 = typeOf[~>[_, _]].typeConstructor.typeSymbol
       val tupletpe = tpe.baseType(codefsym2) match {
-        case TypeRef(_, _, List(tpe, _)) => tpe
+        case TypeRef(_, _, List(_tpe, _)) => _tpe
       }
       val tuple2sym = typeOf[(_, _)].typeConstructor.typeSymbol
       tupletpe.baseType(tuple2sym) match {
@@ -369,18 +370,18 @@ trait Analyzer[C <: Context] {
       sys.error(s"Not a coroutine sugar type with type params: $tpe")
     }
 
-  def coroutineYieldReturnTypes(tpe: Type) = {
+  def coroutineYieldReturnTypes(tpe: Type): (Type, Type) = {
     val codefsym = typeOf[Coroutine.DefMarker[_]].typeConstructor.typeSymbol
     val tuplesym = typeOf[(_, _)].typeConstructor.typeSymbol
     tpe.baseType(codefsym) match {
       case TypeRef(_, sym, List(typetuple)) =>
         typetuple.baseType(tuplesym) match {
-          case TypeRef(_, sym, List(yldtpe, rettpe)) => (yldtpe, rettpe)
+          case TypeRef(_, _sym, List(yldtpe, rettpe)) => (yldtpe, rettpe)
         }
     }
   }
 
-  def coroutineTypeFor(tpe: Type) = {
+  def coroutineTypeFor(tpe: Type): Type = {
     val codeftpe = typeOf[Coroutine[_, _]].typeConstructor
     appliedType(codeftpe, List(tpe))
   }
@@ -405,35 +406,35 @@ trait Analyzer[C <: Context] {
   }
 
   // return type is the lub of the function return type and yield argument types
-  def isCoroutinesPkg(q: Tree) = q match {
-    case q"org.coroutines.`package`" => true
+  def isCoroutinesPkg(q: Tree): Boolean = q match {
+    case q"org.coroutines.`package`"  => true
     case q"coroutines.this.`package`" => true
     case t => false
   }
 
-  def isRefType(tpe: Type) = !isValType(tpe)
+  def isRefType(tpe: Type): Boolean = !isValType(tpe)
 
-  def isValType(tpe: Type) = {
+  def isValType(tpe: Type): Boolean = {
     tpe =:= typeOf[Boolean] ||
-    tpe =:= typeOf[Byte] ||
-    tpe =:= typeOf[Short] ||
-    tpe =:= typeOf[Char] ||
-    tpe =:= typeOf[Int] ||
-    tpe =:= typeOf[Float] ||
-    tpe =:= typeOf[Long] ||
+    tpe =:= typeOf[Byte]    ||
+    tpe =:= typeOf[Short]   ||
+    tpe =:= typeOf[Char]    ||
+    tpe =:= typeOf[Int]     ||
+    tpe =:= typeOf[Float]   ||
+    tpe =:= typeOf[Long]    ||
     tpe =:= typeOf[Double]
   }
 
   def typeChar(tpe: Type): Char = {
     if (isRefType(tpe)) 'L'
     else if (tpe =:= typeOf[Boolean]) 'Z'
-    else if (tpe =:= typeOf[Byte]) 'B'
-    else if (tpe =:= typeOf[Short]) 'S'
-    else if (tpe =:= typeOf[Char]) 'C'
-    else if (tpe =:= typeOf[Int]) 'I'
-    else if (tpe =:= typeOf[Float]) 'F'
-    else if (tpe =:= typeOf[Long]) 'J'
-    else if (tpe =:= typeOf[Double]) 'D'
+    else if (tpe =:= typeOf[Byte])    'B'
+    else if (tpe =:= typeOf[Short])   'S'
+    else if (tpe =:= typeOf[Char])    'C'
+    else if (tpe =:= typeOf[Int])     'I'
+    else if (tpe =:= typeOf[Float])   'F'
+    else if (tpe =:= typeOf[Long])    'J'
+    else if (tpe =:= typeOf[Double])  'D'
     else sys.error("unreachable")
   }
 
