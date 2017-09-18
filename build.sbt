@@ -1,34 +1,28 @@
-import java.io.{File, FileInputStream}
+lazy val projectName                    = "coroutines"
+
+//lazy val projectVersion                 = "0.8-SNAPSHOT"
+//lazy val projectOrg                     = "com.storm-enroute"
+
+// we change these to publish other artifact
+lazy val projectVersion                 = "0.1.0-SNAPSHOT"
+lazy val projectOrg                     = "de.sciss"
+
+def repoName                            = projectName
+
+// ---- main dependencies ----
+
+lazy val scalaParserCombinatorsVersion  = "1.0.6"
+
+// ---- test dependencies ----
 
 lazy val scalaTestVersion               = "3.0.4"
 lazy val scalaAsyncVersion              = "0.9.7"
-lazy val scalaParserCombinatorsVersion  = "1.0.6"
 lazy val scalaMeterVersion              = "0.9-SNAPSHOT"
 
-lazy val projectName                    = "coroutines"
-lazy val projectVersion                 = "0.8-SNAPSHOT"
-def repoName                            = projectName
-
-def versionFromFile(file: File, labels: List[String]): String = {
-  val fis   = new FileInputStream(file)
-  val props = new java.util.Properties()
-  try props.load(fis)
-  finally fis.close()
-  labels.map(label => Option(props.getProperty(label)).get).mkString(".")
-}
-
-lazy val coroutinesCrossScalaVersions = Def.setting {
-  val dir  = (baseDirectory in coroutines).value
-  val path = dir / "cross.conf"
-  scala.io.Source.fromFile(path).getLines.filter(_.trim != "").toSeq
-}
-
-lazy val coroutinesScalaVersion = Def.setting {
-  coroutinesCrossScalaVersions.value.head
-}
+// ---- settings ----
 
 lazy val coroutinesCommonSettings = Seq(
-  organization          := "com.storm-enroute",
+  organization          := projectOrg,
   version               := projectVersion,
   scalaVersion          := "2.12.3",
   crossScalaVersions    := Seq("2.12.3", "2.11.11"),
@@ -43,12 +37,15 @@ lazy val coroutinesCommonSettings = Seq(
   scalacOptions ++= Seq(
     "-deprecation",
     "-unchecked",
-    "-optimise"
+    "-feature",
+    "-encoding", "utf8",
+    "-Xlint",
+    "-Xfuture"
   ),
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11))  => Seq("-Yinline-warnings")
-      case _              => Nil
+      case Some((2, 11))  => Seq("-Yinline-warnings", "-optimise")
+      case _              => Seq("-opt:l:inline", "-opt-inline-from:**")
     }
   },
   publishMavenStyle := true,
@@ -84,6 +81,8 @@ lazy val coroutinesCommonSettings = Seq(
 )
 
 lazy val Benchmarks = config("bench").extend(Test)
+
+// ---- modules ----
 
 lazy val coroutines: Project = Project(id = projectName, base = file("."))
   .aggregate(coroutinesCommon)
