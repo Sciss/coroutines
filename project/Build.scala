@@ -43,8 +43,7 @@ object CoroutinesBuild extends MechaRepoBuild {
     scalacOptions ++= Seq(
       "-deprecation",
       "-unchecked",
-      "-optimise",
-      "-Yinline-warnings"
+      "-optimise"
     ),
     resolvers ++= Seq(
       "Sonatype OSS Snapshots" at
@@ -91,6 +90,12 @@ object CoroutinesBuild extends MechaRepoBuild {
 
   def dependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, major)) if major >= 12 => Seq(
+        "org.scalatest" % "scalatest_2.12" % "3.0.4" % "test",
+        "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6",
+        "org.scala-lang" % "scala-reflect" % "2.12.3",
+        "org.scala-lang.modules" % "scala-async_2.12" % "0.9.6" % "test;bench"
+      )
     case Some((2, major)) if major >= 11 => Seq(
       "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test",
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
@@ -111,8 +116,7 @@ object CoroutinesBuild extends MechaRepoBuild {
     scalacOptions ++= Seq(
       "-deprecation",
       "-unchecked",
-      "-optimise",
-      "-Yinline-warnings"
+      "-optimise"
     ),
     resolvers ++= Seq(
       "Sonatype OSS Snapshots" at
@@ -168,8 +172,7 @@ object CoroutinesBuild extends MechaRepoBuild {
     scalacOptions ++= Seq(
       "-deprecation",
       "-unchecked",
-      "-optimise",
-      "-Yinline-warnings"
+      "-optimise"
     ),
     resolvers ++= Seq(
       "Sonatype OSS Snapshots" at
@@ -216,6 +219,11 @@ object CoroutinesBuild extends MechaRepoBuild {
 
   def commonDependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
+    case Some((2, major)) if major >= 12 => Seq(
+      "org.scalatest" % "scalatest_2.12" % "3.0.4" % "test",
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6",
+      "org.scala-lang" % "scala-reflect" % "2.12.3"
+    )
     case Some((2, major)) if major >= 11 => Seq(
       "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test",
       "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
@@ -226,6 +234,9 @@ object CoroutinesBuild extends MechaRepoBuild {
 
   def extraDependencies(scalaVersion: String) =
     CrossVersion.partialVersion(scalaVersion) match {
+      case Some((2, major)) if major >= 12 => Seq(
+        "org.scalatest" % "scalatest_2.12" % "3.0.1" % "test"
+      )
       case Some((2, major)) if major >= 11 => Seq(
         "org.scalatest" % "scalatest_2.11" % "2.2.6" % "test"
       )
